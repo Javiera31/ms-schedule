@@ -6,7 +6,8 @@ import { userDto } from './dto/user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Schedule } from './entities/schedule.entity';
 import { In, Repository } from 'typeorm';
-import { getDatesOfWeek } from './utils/getDatesOfWeek';
+import { getDatesInRange, getDatesOfWeek, getSundayOfWeek, isLastWeek } from './utils/getDatesOfWeek';
+import { dateRangeDto } from './dto/dateRangeDto';
 
 @Injectable()
 export class ScheduleService {
@@ -48,25 +49,127 @@ export class ScheduleService {
     return newEntry;
   }
 
-  createDeparture(createScheduleDto: CreateScheduleDepartureDto) {
-    //buscar en repositorio si hay una tupla que tenga el id del usuario en idUser(number), la misma fecha con date, ver si tiene un valor en entered y que no tenga valor left. Si left tiene valor decir que no se puede crear. Si entered no tiene valor decir que no se ha guardado la entrada aun (no se crea salida)
-    return 'This action adds a new schedule entry';
+  async createDeparture(user: userDto,createScheduleDto: CreateScheduleDepartureDto) {
+    const newExit = await this.scheduleRepository.findOne({
+      where: {
+        idUser: user.id,
+        date: createScheduleDto.date,
+      },
+    });
+
+    if (!newExit) {
+      throw new BadRequestException(
+        'An entry is required in order to schedule an exit.',
+      );
+    }
+
+    if (newExit.left) {
+      throw new BadRequestException(
+        'Exit for this user on this date already exists',
+      );
+    }
+
+    // Actualizar la entrada existente con la hora de salida
+    newExit.left = createScheduleDto.left
+    // Guardar la actualización en la base de datos
+    await this.scheduleRepository.save(newExit);
+
+    // Retornar la entrada actualizada
+    return newExit;
   }
 
   async findWeek(user: userDto,inputDate: Date){
-    //request.user = { id: userId, role: userRole };
-    //obtener las fechas de los días de la semana con la función hecha
+    // Ver si la fecha ingresada es de una semana anterior a la semana del día de hoy
+    if(isLastWeek(inputDate)){
+      const sundayOfLastWeek = getSundayOfWeek(inputDate);
+      console.log("sundayOfLastWeek ",sundayOfLastWeek)
+      const attendance = await this.getWeekAttendance(user,sundayOfLastWeek);
+      return attendance;
+    }
+    // En caso de que fecha sea hoy o esta semana
+    const attendance = await this.getWeekAttendance(user,inputDate);
+    return attendance;
+  }
+
+/*  async findWeekUser(user: number,inputDate: Date){
+    // Ver si la fecha ingresada es de una semana anterior a la semana del día de hoy
+    if(isLastWeek(inputDate)){
+      const sundayOfLastWeek = getSundayOfWeek(inputDate);
+      console.log("sundayOfLastWeek ",sundayOfLastWeek)
+      try{
+        const attendance = await this.getWeekAttendanceUser(user,sundayOfLastWeek);
+      return attendance;
+      }catch{
+        
+      }
+      
+    }
+    // En caso de que fecha sea hoy o esta semana
+    const attendance = await this.getWeekAttendanceUser(user,inputDate);
+    return attendance;
+  }
+
+  async getWeekAttendanceUser(user: number,inputDate: Date){
     const weekDates = getDatesOfWeek(inputDate);
-    console.log("???")
-    console.log(user)
+
+    //buscar en repository el id y las date que sean igual a la del request y de la fecha ingresada
+    const schedules = await this.scheduleRepository.find({
+      where: {
+        idUser: user,
+        date: In(weekDates), //no me está incluyendo el buscar la fecha actual
+      },
+    });
+
+    //retornar un json con las que tengan los dos parámetros (id,date) iguales que los datos ingresados y el json muestre la hora de entrada y salida por date
+    const data = {};
+    schedules.forEach(entry => {
+      data[entry.id] = {
+        date: entry.date,
+        entered: entry.entered,
+        left: entry.left,
+      };
+    });
+    return data;
+  }*/
+  
+  
+  async findRange(user: userDto,inputDate: dateRangeDto){
+    const startDate = new Date(inputDate.startDate);
+    const endDate = new Date(inputDate.endDate);
+
+    // obtener fechas
+    const dateRange = await getDatesInRange(startDate,endDate);
+    
+
+    const dateFound = await this.scheduleRepository.find({
+      where: {
+        idUser: user.id,
+        date: In(dateRange), //no me está incluyendo el buscar la fecha actual
+      },
+    });
+
+    const data = {};
+    dateFound.forEach(entry => {
+      data[entry.id] = {
+        date: entry.date,
+        entered: entry.entered,
+        left: entry.left,
+      };
+    });
+    return data;
+  }
+
+  async getWeekAttendance(user: userDto,inputDate: Date){
+    const weekDates = getDatesOfWeek(inputDate);
 
     //buscar en repository el id y las date que sean igual a la del request y de la fecha ingresada
     const schedules = await this.scheduleRepository.find({
       where: {
         idUser: user.id,
-        date: In(weekDates.map(date => new Date(date))),
+        date: In(weekDates), //no me está incluyendo el buscar la fecha actual
       },
     });
+
     //retornar un json con las que tengan los dos parámetros (id,date) iguales que los datos ingresados y el json muestre la hora de entrada y salida por date
     const data = {};
     schedules.forEach(entry => {

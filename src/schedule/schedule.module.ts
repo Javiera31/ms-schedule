@@ -9,7 +9,7 @@ import { HttpModule } from '@nestjs/axios';
 @Module({
   imports: [TypeOrmModule.forFeature([Schedule]),Repository,HttpModule], //agregamos httpmodule
   controllers: [ScheduleController],
-  providers: [ScheduleService],
+  providers: [ScheduleService, Repository],
   exports: [ScheduleService],
 })
 export class ScheduleModule {}

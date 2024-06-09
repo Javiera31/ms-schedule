@@ -1,12 +1,12 @@
 import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
-export class CreateScheduleDepartureDto {
+export class dateRangeDto {
 
     @IsNotEmpty()
     @IsString()
-    readonly date: Date;
+    readonly startDate: Date;
   
     @IsString()
     @IsNotEmpty()
-    readonly left: string;
+    readonly endDate: Date;
 }
