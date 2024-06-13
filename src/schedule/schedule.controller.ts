@@ -5,6 +5,9 @@ import { AuthJWTGuard } from './guards/authJWT.guard';
 import { CreateScheduleEntryDto } from './dto/createScheduleEntry.dto';
 import { CreateScheduleDepartureDto } from './dto/createScheduleDeparture.dto';
 import { dateRangeDto } from './dto/dateRangeDto';
+import { Roles } from './decorators/roles.decorator';
+import { Role } from './enums/role.enum';
+import { RolesGuard } from './guards/roles.guard';
 
 @Controller('schedule')
 export class ScheduleController {
@@ -14,15 +17,15 @@ export class ScheduleController {
   @UseGuards(AuthJWTGuard)
   @Post('entry')
   createEntry(@Request() req, @Body() createScheduleDto: CreateScheduleEntryDto) {
-    const user = req.user;
-    return this.scheduleService.createEntry(user, createScheduleDto);
+    const user = req.user;//este es el resultado del guard
+    return this.scheduleService.createEntry(user.id, createScheduleDto);
   }//verificar que la fecha sea de hoy
 
   @Post('departure')
   @UseGuards(AuthJWTGuard)
   createDeparture(@Request() req, @Body() createScheduleDto: CreateScheduleDepartureDto) {
     const user = req.user;
-    return this.scheduleService.createDeparture(user, createScheduleDto);
+    return this.scheduleService.createDeparture(user.id, createScheduleDto);
   }
 
   @UseGuards(AuthJWTGuard)
@@ -31,7 +34,7 @@ export class ScheduleController {
     const user = req.user;
     const date = new Date(inputDate);
     console.log("en controller inputDate es ",inputDate)
-    return this.scheduleService.findWeek(user, date); //acá retornar json
+    return this.scheduleService.findWeek(user.id, date); //acá retornar json
   }
 
   @Get()
@@ -48,7 +51,7 @@ export class ScheduleController {
   @Post()
   schedulesInRange(@Request() req, @Body('inputDate') inputDate: dateRangeDto) {
     const user = req.user;
-    return this.scheduleService.findRange(user,inputDate);
+    return this.scheduleService.findRange(user.id,inputDate);
   }
 
   @Patch(':id')
@@ -68,15 +71,27 @@ export class ScheduleController {
     return (user.role);
   }
 
- /* @UseGuards(AuthJWTGuard)
+  @UseGuards(AuthJWTGuard,RolesGuard)
+  @Roles(Role.Admin)
   @Post('findUserWeek')
-  findUserWeek(@Request() req, @Body() inputDate: string, userFound: number) {
-    const user = req.user;
-    if(!user.role){
-      throw new BadRequestException('Unauthorized user');
-    }
+  findUserWeek(@Request() req, @Body() body: { inputDate: string, userFound: number }) {
+    //const date = new Date(inputDate);
+    const { inputDate, userFound } = body;
     const date = new Date(inputDate);
-    return this.scheduleService.findWeekUser(userFound, date); //acá retornar json
-  }*/
+    console.log("date",date);
+    if (isNaN(date.getTime())) {
+      throw new BadRequestException('Invalid date format');
+    }
+
+    return this.scheduleService.findWeek(userFound, date); //acá retornar json
+  }
+
+  @UseGuards(AuthJWTGuard,RolesGuard)
+  @Roles(Role.Admin)
+  @Post('schedulesUserInRange')
+  schedulesUserInRange(@Request() req, @Body() body: { inputDate: dateRangeDto, userFound: number}) {
+    const { inputDate, userFound } = body;
+    return this.scheduleService.findRange(userFound,inputDate);
+  }
 
 }

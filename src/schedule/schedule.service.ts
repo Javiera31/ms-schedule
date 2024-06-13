@@ -16,11 +16,11 @@ export class ScheduleService {
     private readonly scheduleRepository: Repository<Schedule>
   ) { }
 
-  async createEntry(user: userDto, createScheduleDto: CreateScheduleEntryDto) {
+  async createEntry(user: number, createScheduleDto: CreateScheduleEntryDto) {
     //buscar en repositorio si hay una tupla que tenga el id del usuario en idUser(number) y la misma fecha con date. Si es así decir que no se puede crear
     const existingEntry = await this.scheduleRepository.findOne({
       where: {
-        idUser: user.id,
+        idUser: user,
         date: createScheduleDto.date
       }
     });
@@ -31,7 +31,7 @@ export class ScheduleService {
 
     //si es que se puede crear, crearla y guardar los valores en la base de datos
     const newEntry = this.scheduleRepository.create({
-      idUser: user.id,
+      idUser: user,
       date: createScheduleDto.date,
       entered: createScheduleDto.entered
     });
@@ -40,7 +40,7 @@ export class ScheduleService {
     await this.scheduleRepository.save(newEntry);
     const fecha = await this.scheduleRepository.findOne({
       where: {
-        idUser: user.id,
+        idUser: user,
         date: createScheduleDto.date
       }
     });
@@ -49,10 +49,10 @@ export class ScheduleService {
     return newEntry;
   }
 
-  async createDeparture(user: userDto,createScheduleDto: CreateScheduleDepartureDto) {
+  async createDeparture(user: number,createScheduleDto: CreateScheduleDepartureDto) {
     const newExit = await this.scheduleRepository.findOne({
       where: {
-        idUser: user.id,
+        idUser: user,
         date: createScheduleDto.date,
       },
     });
@@ -78,7 +78,7 @@ export class ScheduleService {
     return newExit;
   }
 
-  async findWeek(user: userDto,inputDate: Date){
+  async findWeek(user: number,inputDate: Date){
     // Ver si la fecha ingresada es de una semana anterior a la semana del día de hoy
     if(isLastWeek(inputDate)){
       const sundayOfLastWeek = getSundayOfWeek(inputDate);
@@ -90,50 +90,8 @@ export class ScheduleService {
     const attendance = await this.getWeekAttendance(user,inputDate);
     return attendance;
   }
-
-/*  async findWeekUser(user: number,inputDate: Date){
-    // Ver si la fecha ingresada es de una semana anterior a la semana del día de hoy
-    if(isLastWeek(inputDate)){
-      const sundayOfLastWeek = getSundayOfWeek(inputDate);
-      console.log("sundayOfLastWeek ",sundayOfLastWeek)
-      try{
-        const attendance = await this.getWeekAttendanceUser(user,sundayOfLastWeek);
-      return attendance;
-      }catch{
-        
-      }
-      
-    }
-    // En caso de que fecha sea hoy o esta semana
-    const attendance = await this.getWeekAttendanceUser(user,inputDate);
-    return attendance;
-  }
-
-  async getWeekAttendanceUser(user: number,inputDate: Date){
-    const weekDates = getDatesOfWeek(inputDate);
-
-    //buscar en repository el id y las date que sean igual a la del request y de la fecha ingresada
-    const schedules = await this.scheduleRepository.find({
-      where: {
-        idUser: user,
-        date: In(weekDates), //no me está incluyendo el buscar la fecha actual
-      },
-    });
-
-    //retornar un json con las que tengan los dos parámetros (id,date) iguales que los datos ingresados y el json muestre la hora de entrada y salida por date
-    const data = {};
-    schedules.forEach(entry => {
-      data[entry.id] = {
-        date: entry.date,
-        entered: entry.entered,
-        left: entry.left,
-      };
-    });
-    return data;
-  }*/
   
-  
-  async findRange(user: userDto,inputDate: dateRangeDto){
+  async findRange(user: number,inputDate: dateRangeDto){
     const startDate = new Date(inputDate.startDate);
     const endDate = new Date(inputDate.endDate);
 
@@ -143,8 +101,8 @@ export class ScheduleService {
 
     const dateFound = await this.scheduleRepository.find({
       where: {
-        idUser: user.id,
-        date: In(dateRange), //no me está incluyendo el buscar la fecha actual
+        idUser: user,
+        date: In(dateRange),
       },
     });
 
@@ -159,13 +117,13 @@ export class ScheduleService {
     return data;
   }
 
-  async getWeekAttendance(user: userDto,inputDate: Date){
+  async getWeekAttendance(user: number,inputDate: Date){
     const weekDates = getDatesOfWeek(inputDate);
 
     //buscar en repository el id y las date que sean igual a la del request y de la fecha ingresada
     const schedules = await this.scheduleRepository.find({
       where: {
-        idUser: user.id,
+        idUser: user,
         date: In(weekDates), //no me está incluyendo el buscar la fecha actual
       },
     });

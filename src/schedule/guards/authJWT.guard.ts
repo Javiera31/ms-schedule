@@ -1,6 +1,8 @@
 import { HttpService } from '@nestjs/axios';
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { lastValueFrom } from 'rxjs';
+import { Role } from '../enums/role.enum';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class AuthJWTGuard implements CanActivate {
@@ -24,8 +26,9 @@ export class AuthJWTGuard implements CanActivate {
           this.httpService.post('http://localhost:3000/auth', { jwt })
         );
         const { userId, isAdmin } = response.data;
-        request.user = { id: userId, role: isAdmin };
+        request.user = { id: userId, role: isAdmin ? Role.Admin : Role.User };
         return true;
+        
       } catch (err) {
         throw new UnauthorizedException('Invalid token');
       }
