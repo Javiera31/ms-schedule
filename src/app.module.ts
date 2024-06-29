@@ -11,6 +11,14 @@ import { Schedule } from './schedule/entities/schedule.entity';
 import { ScheduleController } from './schedule/schedule.controller';
 import { ScheduleService } from './schedule/schedule.service';
 import { HttpModule } from '@nestjs/axios';
+import { CronJobController } from './cronJob/cronJob.controller';
+import { CronJobService } from './cronJob/cronJob.service';
+import { WeeklyHoursService } from './weeklyHours/weeklyHours.service';
+import { MonthlyHoursService } from './monthlyHours/monthlyHours.service';
+import { MonthlyHours } from './monthlyHours/entities/monthlyHours.entity';
+import { WeeklyHours } from './weeklyHours/entities/weeklyHours.entity';
+import { WeeklyHoursModule } from './weeklyHours/weeklyHours.module';
+import { MonthlyHoursModule } from './monthlyHours/monthlyHours.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -43,15 +51,17 @@ import { HttpModule } from '@nestjs/axios';
         database: configService.get<string>('DATABASE_NAME') as string,
         synchronize: configService.get<string>('DATABASE_SYNC') === 'true',
         ssl: false,
-        entities: [Schedule],
+        entities: [Schedule,WeeklyHours,MonthlyHours],
       };
     },
   }),
-  TypeOrmModule.forFeature([Schedule, Repository]),
+  TypeOrmModule.forFeature([Schedule, Repository,WeeklyHours,MonthlyHours]),
   ScheduleModule,
+  WeeklyHoursModule,
+  MonthlyHoursModule,
   HttpModule, //agregamos httpmodule
 ],
-  controllers: [AppController,ScheduleController],
-  providers: [AppService,ScheduleService,Schedule,Repository],
+  controllers: [AppController,ScheduleController,CronJobController],
+  providers: [AppService,ScheduleService,Schedule,Repository,CronJobService,WeeklyHoursService,MonthlyHoursService],
 })
 export class AppModule {}

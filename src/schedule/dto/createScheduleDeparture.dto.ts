@@ -9,4 +9,8 @@ export class CreateScheduleDepartureDto {
     @IsString()
     @IsNotEmpty()
     readonly left: string;
+
+    @IsNotEmpty()
+    @IsString()
+    leftLocation: string; //verificar que sea latitud/longitud/altitud
 }

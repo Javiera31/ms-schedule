@@ -5,7 +5,7 @@ import { CreateScheduleDepartureDto } from './dto/createScheduleDeparture.dto';
 import { userDto } from './dto/user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Schedule } from './entities/schedule.entity';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { getDatesInRange, getDatesOfWeek, getSundayOfWeek, isLastWeek } from './utils/getDatesOfWeek';
 import { dateRangeDto } from './dto/dateRangeDto';
 
@@ -13,7 +13,7 @@ import { dateRangeDto } from './dto/dateRangeDto';
 export class ScheduleService {
   constructor(
     @InjectRepository(Schedule)
-    private readonly scheduleRepository: Repository<Schedule>
+    private readonly scheduleRepository: Repository<Schedule>,
   ) { }
 
   async createEntry(user: number, createScheduleDto: CreateScheduleEntryDto) {
@@ -26,14 +26,15 @@ export class ScheduleService {
     });
 
     if (existingEntry) {
-      throw new BadRequestException('Entry for this user on this date already exists');
+      throw new BadRequestException('Ya existe una entrada marcada para hoy');
     }
 
     //si es que se puede crear, crearla y guardar los valores en la base de datos
     const newEntry = this.scheduleRepository.create({
       idUser: user,
       date: createScheduleDto.date,
-      entered: createScheduleDto.entered
+      entered: createScheduleDto.entered,
+      enteredLocation: createScheduleDto.enteredLocation
     });
 
     // Guardar la nueva entrada en la base de datos
@@ -44,8 +45,6 @@ export class ScheduleService {
         date: createScheduleDto.date
       }
     });
-    console.log(fecha.date);
-    //createScheduleDto = { idUser: number, date: Date, entry: string correponde a hora }
     return newEntry;
   }
 
@@ -59,18 +58,19 @@ export class ScheduleService {
 
     if (!newExit) {
       throw new BadRequestException(
-        'An entry is required in order to schedule an exit.',
+        'Se requiere una entrada para marcar salida.',
       );
     }
 
     if (newExit.left) {
       throw new BadRequestException(
-        'Exit for this user on this date already exists',
+        'Ya existe una salida marcada',
       );
     }
 
     // Actualizar la entrada existente con la hora de salida
-    newExit.left = createScheduleDto.left
+    newExit.left = createScheduleDto.left;
+    newExit.leftLocation = createScheduleDto.leftLocation;
     // Guardar la actualización en la base de datos
     await this.scheduleRepository.save(newExit);
 
@@ -140,19 +140,55 @@ export class ScheduleService {
     return data;
   }
 
-  findAll() {
-    return `This action returns all schedule`;
+  async findAll(): Promise<Schedule[]> {
+    return await this.scheduleRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} schedule`;
+  async findScheduleById(id: number): Promise<Schedule> {
+    try {
+      const schedule = await this.scheduleRepository.findOneBy({
+        id: id,
+      });
+      if (!schedule) {
+        throw new Error('Horario no encontrado');
+      }
+      return schedule;
+    } catch (error) {
+      return error;
+    }
   }
 
-  update(id: number, updateScheduleDto: UpdateScheduleDto) {
-    return `This action updates a #${id} schedule`;
+  async update(user: number,updateScheduleDto: UpdateScheduleDto) {
+    const schedule = await this.findScheduleById(updateScheduleDto.id!);
+    if (!schedule) {
+      throw new Error('Horario no encontrado');
+    }
+    const existingEntry = await this.scheduleRepository.findOne({//fecha se cambió a una existente
+      where: {
+        date: updateScheduleDto.date,
+        idUser: user,
+        id: Not(updateScheduleDto.id),
+      }
+    });
+    if(existingEntry){
+      throw new Error('Ya existe un horario existente en la fecha');
+    }
+
+    const updatedSchedule = new Schedule();
+    updatedSchedule.id = updateScheduleDto.id;
+    updatedSchedule.date = updateScheduleDto.date;
+    updatedSchedule.entered = updateScheduleDto.entered;
+    updatedSchedule.left = updateScheduleDto.left;
+    updatedSchedule.idUser = schedule.idUser;
+    updatedSchedule.enteredLocation = schedule.enteredLocation;
+    updatedSchedule.leftLocation = schedule.leftLocation;
+    updatedSchedule.editedByAdmin = true;
+
+    return await this.scheduleRepository.save(updatedSchedule);
   }
 
   remove(id: number) {
     return `This action removes a #${id} schedule`;
   }
+
 }

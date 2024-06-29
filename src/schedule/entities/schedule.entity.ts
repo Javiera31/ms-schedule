@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { IsString } from 'class-validator';
+import { Entity, Column, PrimaryGeneratedColumn, Point } from 'typeorm';
 
 @Entity()
 export class Schedule {
@@ -17,4 +18,15 @@ export class Schedule {
 
   @Column({ type: 'time', nullable: true, default: null })
   left: string;
+
+  @Column({ nullable: true })
+  @IsString()
+  enteredLocation: string;
+
+  @Column({ nullable: true })
+  @IsString()
+  leftLocation: string;
+
+  @Column({ type: 'boolean', default: false, nullable: false })
+  editedByAdmin: boolean;
 }
